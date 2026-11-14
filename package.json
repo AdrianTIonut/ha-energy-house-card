@@ -1,0 +1,10 @@
+{
+  "name": "ha-energy-house-card",
+  "version": "0.1.0",
+  "description": "Home Assistant card for a house with solar, grid and battery: flow diagram, daily statistics, battery runtime (with reserve and backup), consumers, graph and editable prices. Visual editor included.",
+  "type": "module",
+  "license": "MIT",
+  "scripts": { "build": "node build.js", "test": "node tests/run-all.mjs" },
+  "repository": { "type": "git", "url": "git+https://github.com/AdrianTIonut/ha-energy-house-card.git" },
+  "keywords": ["home-assistant", "lovelace", "custom-card", "energy", "solar", "battery", "hacs", "dashboard"]
+}

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Energy house card — demo</title>
+<style>body{margin:0;padding:16px;box-sizing:border-box;background:#05070b;font-family:system-ui,sans-serif}.wrap{display:grid;gap:12px;margin:0 auto}</style></head>
+<body><div id="out" class="wrap"></div>
+<script type="module">
+// Demo with a fake Home Assistant (invented entities). Parameters: scene (full | compact | header | battery | consumers), lang (en | ro), w (width px).
+import '../../ha-energy-house-card.js';
+const q = new URLSearchParams(location.search), scene = q.get('scene') || 'full', lang = q.get('lang') || 'en', w = +q.get('w') || 480;
+const st = (v, u, extra) => ({ state: String(v), attributes: { unit_of_measurement: u, ...(extra || {}) } });
+const hass = { language: lang, locale: { language: lang }, callWS: async () => ({}), callService() {}, states: {
+  'sensor.solar_power': st(3200, 'W'), 'sensor.grid_import_power': st(0, 'W'), 'sensor.grid_export_power': st(900, 'W'),
+  'sensor.battery_charge_power': st(800, 'W'), 'sensor.battery_discharge_power': st(0, 'W'), 'sensor.battery_soc': st(68, '%'),
+  'sensor.solar_today': st(18.4, 'kWh'), 'sensor.import_today': st(3.1, 'kWh'), 'sensor.export_today': st(12.4, 'kWh'), 'sensor.import_month': st(96.2, 'kWh'),
+  'sensor.battery_charged_today': st(8.2, 'kWh'), 'sensor.battery_discharged_today': st(2.1, 'kWh'), 'sensor.radiation': st(520, 'W/m²'),
+  'sensor.pool_power': st(250, 'W'), 'sensor.ev_power': st(100, 'W'), 'sensor.workshop_power': st(450, 'W'),
+  'input_number.buy_price': st(0.22, 'EUR/kWh'), 'input_number.sell_price': st(0.08, 'EUR/kWh'),
+} };
+const base = { pv_entity: 'sensor.solar_power', import_entity: 'sensor.grid_import_power', export_entity: 'sensor.grid_export_power', charge_entity: 'sensor.battery_charge_power', discharge_entity: 'sensor.battery_discharge_power',
+  soc_entity: 'sensor.battery_soc', battery_capacity_kwh: 10, battery_reserve_pct: 20, battery_shutdown_pct: 10, pv_daily_entity: 'sensor.solar_today', import_daily_entity: 'sensor.import_today', export_daily_entity: 'sensor.export_today',
+  import_monthly_entity: 'sensor.import_month', bat_charge_daily_entity: 'sensor.battery_charged_today', bat_discharge_daily_entity: 'sensor.battery_discharged_today', radiation_entity: 'sensor.radiation',
+  tarif_entity: 'input_number.buy_price', pret_export_entity: 'input_number.sell_price',
+  consumers: [{ name: 'Pool', power: 'sensor.pool_power', icon: 'mdi:pool' }, { name: 'EV charger', power: 'sensor.ev_power', icon: 'mdi:car-electric' }, { name: 'Workshop', power: 'sensor.workshop_power', icon: 'mdi:warehouse' }] };
+const SCENES = {
+  full: { sections: ['header', 'flow', 'battery', 'consumers', 'graph', 'prices'] },
+  compact: { sections: ['compact', 'compact_stats'], flow_style: 'open', compact_extras: true },
+  header: { sections: ['header'] },
+  battery: { sections: ['battery'] },
+  consumers: { sections: ['consumers'] },
+};
+function fakeHistory() {
+  const now = Math.floor(Date.now() / 1000), t0 = now - 24 * 3600, N = 289, pv = [], imp = [], exp = [], chg = [], dis = [], soc = [];
+  for (let i = 0; i < N; i++) {
+    const lu = t0 + i * 300, hr = (i * 300 / 3600) % 24, s = (hr >= 6 && hr <= 18) ? Math.sin((hr - 6) / 12 * Math.PI) * 3200 : 0;
+    const c = 500 + 900 * Math.exp(-((hr - 8) ** 2) / 8) + 700 * Math.exp(-((hr - 20) ** 2) / 6), impW = Math.max(0, c - s), expW = Math.max(0, s - c);
+    pv.push({ s: String(Math.round(s)), lu }); imp.push({ s: String(Math.round(impW)), lu }); exp.push({ s: String(Math.round(expW)), lu }); chg.push({ s: '0', lu }); dis.push({ s: String(Math.round(impW)), lu }); soc.push({ s: String(Math.round(40 + 40 * Math.sin((hr - 6) / 24 * 2 * Math.PI))), lu });
+  }
+  return { 'sensor.solar_power': pv, 'sensor.grid_import_power': imp, 'sensor.grid_export_power': exp, 'sensor.battery_charge_power': chg, 'sensor.battery_discharge_power': dis, 'sensor.battery_soc': soc };
+}
+await customElements.whenDefined('energy-house-card');
+const el = document.createElement('energy-house-card');
+document.getElementById('out').style.width = w + 'px';
+document.getElementById('out').append(el);
+el.setConfig({ ...base, ...SCENES[scene] });
+el._historyProvider = async () => fakeHistory();
+el._historyProvider7d = () => ({ kwhPerDay: [14, 18, 11, 16, 9, 12, 7], dayLabels: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'], width: 800, height: 220 });
+el.hass = hass;
+setTimeout(() => { document.title = 'ready'; }, 2200);
+</script></body></html>

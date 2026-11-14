@@ -1,0 +1,14 @@
+name: Bug
+description: The card does not look or behave as it should
+labels: [bug]
+body:
+  - type: input
+    attributes: { label: Card version, description: "From the resource URL or the Marketplace" }
+    validations: { required: true }
+  - type: input
+    attributes: { label: Home Assistant version }
+    validations: { required: true }
+  - type: textarea
+    attributes: { label: Card configuration (YAML, without personal data), render: yaml }
+  - type: textarea
+    attributes: { label: What you expected and what happens, description: "A screenshot and the browser console messages help" }

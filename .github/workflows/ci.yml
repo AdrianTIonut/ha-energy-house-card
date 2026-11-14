@@ -1,0 +1,17 @@
+name: CI
+on:
+  push: { branches: [main] }
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Tests
+        run: node tests/run-all.mjs
+      - name: The built files must be generated from src/
+        run: |
+          node build.js
+          git diff --exit-code energie-casa-card.js ha-energy-house-card.js || (echo "Built files are out of date: run 'node build.js' and commit them" && exit 1)
