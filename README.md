@@ -2,11 +2,13 @@
 
 [Română](README.ro.md) · English
 
-A [Home Assistant](https://www.home-assistant.io/) card for a house with **solar, grid and battery**: a flow diagram, daily statistics, battery runtime (with the reserve and shutdown levels of your inverter, and the backup runtime when the grid is gone), consumers, a 24 h / 7 day graph and editable energy prices. One JavaScript file, no dependencies, no network access. Everything can be set up **from the Home Assistant UI** (visual editor with automatic sensor detection), no YAML needed.
+[![HACS custom](https://img.shields.io/badge/HACS-Custom-orange.svg?style=flat-square)](https://hacs.xyz/docs/faq/custom_repositories/) [![release](https://img.shields.io/github/v/release/AdrianTIonut/ha-energy-house-card?style=flat-square)](https://github.com/AdrianTIonut/ha-energy-house-card/releases) ![downloads](https://img.shields.io/github/downloads/AdrianTIonut/ha-energy-house-card/total?style=flat-square) [![build](https://img.shields.io/github/actions/workflow/status/AdrianTIonut/ha-energy-house-card/ci.yml?branch=main&style=flat-square)](https://github.com/AdrianTIonut/ha-energy-house-card/actions) ![license](https://img.shields.io/github/license/AdrianTIonut/ha-energy-house-card?style=flat-square)
+
+A [Home Assistant](https://www.home-assistant.io/) card for a house with **solar, grid and battery**: a flow diagram, daily statistics, battery runtime (with the reserve and shutdown levels of your inverter, and the backup runtime when the grid is gone), consumers, a 24 h / 7 day graph and editable energy prices. The flow is **animated**: the bands glow and dots and arrows run along them in the direction of the energy (they stop with “reduce motion”). One JavaScript file, no dependencies, no network access. Everything can be set up **from the Home Assistant UI** (visual editor with automatic sensor detection), no YAML needed.
 
 <p>
 <img src="docs/img/full.png" width="400" alt="full card">
-<img src="docs/img/compact.png" width="400" alt="compact flow and statistics">
+<img src="docs/img/compact-animated.png" width="400" alt="compact flow and statistics, animated: the dots and arrows run along the ribbons">
 </p>
 
 > **Heads-up (first public version, 0.1.0).** The card was built for a wall tablet in Romania, so the text on the card is in **Romanian** (Casă, Solar, Baterie, Rețea, Consumatori…) and prices are shown in *lei/kWh*. The configuration editor is in English and Romanian. Translating the card itself is the next step. If you do not set the entity fields, the card looks for the author’s default sensor names (for a Deye inverter), so **always set your entities**, or press *Detect sensors automatically* in the editor.
@@ -22,6 +24,10 @@ A [Home Assistant](https://www.home-assistant.io/) card for a house with **solar
 
 1. Download `ha-energy-house-card.js` from the [latest release](https://github.com/AdrianTIonut/ha-energy-house-card/releases/latest) into `config/www/energy-house-card/`.
 2. **Settings → Dashboards → ⋮ → Resources → Add resource**: `/local/energy-house-card/ha-energy-house-card.js?v=1`, type **JavaScript module**. Change the number after each update.
+
+### Updating
+
+Install the update from the Marketplace / HACS and reload the browser. In the mobile app: Settings → Companion app → Debugging → *Reset frontend cache* (or close the app completely and open it again). Manual install: replace the file and change the number in `?v=` of the resource.
 
 ## Setup from the UI
 
@@ -85,6 +91,16 @@ What is not measured by a consumer stays under **Casă** (house): the card compu
 **Look**: `style` (`cyber` | `glass`), `flow_style: open` (icons and values only), `flow_layout` (`auto` | `vertical` | `horizontal`), `flow_shape` (`auto` | `square` | `wide`), `accent_color`, `card_background`, `battery_color` (`#rrggbb`), `show_total`, `show_clock`, `compact_extras`, `grid_info`, `show_solar` / `show_grid` / `show_battery` (`true` / `false` to force; otherwise shown when the entity exists).
 
 Colors: solar orange, export and charging green, import red, consumption magenta.
+
+## Troubleshooting
+
+- **“Custom element doesn't exist: energy-house-card”**: the resource is not loaded. Check Settings → Dashboards → ⋮ → Resources (type *JavaScript module*), then force-refresh (Ctrl+F5).
+- **Values show “—”, or the card shows names you do not have**: the entities are not set. Press *Detect sensors automatically* in the editor, or set them by hand (Developer tools → States has the exact ids).
+- **Import and export look swapped**: tick *Meter is + when exporting* (`grid_invert: true`), or use `import_entity` and `export_entity`.
+- **The runtime shows “—”**: it needs the battery level (`soc_entity`), the capacity and the house load.
+- **The price boxes do nothing**: `tarif_entity` and `pret_export_entity` must be `input_number` helpers.
+- **The texts are in Romanian**: the card itself is not translated yet (see the note at the top); the editor is in English and Romanian.
+- **A new option does nothing after an update**: change the `?v=` number in the resource and force-refresh.
 
 ## Development
 

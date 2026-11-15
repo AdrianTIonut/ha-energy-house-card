@@ -1,6 +1,6 @@
 {
   "name": "ha-energy-house-card",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Home Assistant card for a house with solar, grid and battery: flow diagram, daily statistics, battery runtime (with reserve and backup), consumers, graph and editable prices. Visual editor included.",
   "type": "module",
   "license": "MIT",

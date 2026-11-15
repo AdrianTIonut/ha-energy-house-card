@@ -2,6 +2,7 @@
 // Usage: node build.js && node docs/demo/capture.mjs        (set CHROME=/path/to/chrome if it is not found)
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
+import { crc32 } from 'node:zlib';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, extname } from 'node:path';
@@ -50,9 +51,44 @@ async function shot(file, query, width) {
   writeFileSync(join(out, file), Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64'));
   console.log('✔', file, width + '×' + h);
 }
+
+// ---- animated PNG (APNG): the real CSS animations (glow, dots and arrows running along the flow) stepped frame by frame through the Web Animations API ----
+const u32 = (n) => { const b = Buffer.alloc(4); b.writeUInt32BE(n >>> 0); return b; };
+const u16 = (n) => { const b = Buffer.alloc(2); b.writeUInt16BE(n); return b; };
+const chunk = (type, data) => { const t = Buffer.from(type, 'latin1'); return Buffer.concat([u32(data.length), t, data, u32(crc32(Buffer.concat([t, data])))]); };
+function buildApng(pngs, delayMs) {
+  const parse = (png) => { const o = []; let p = 8; while (p < png.length) { const len = png.readUInt32BE(p), type = png.toString('latin1', p + 4, p + 8); o.push({ type, data: png.subarray(p + 8, p + 8 + len) }); p += 12 + len; } return o; };
+  const frames = pngs.map(parse), ihdr = frames[0].find((c) => c.type === 'IHDR').data, w = ihdr.readUInt32BE(0), h = ihdr.readUInt32BE(4);
+  const o = [Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('acTL', Buffer.concat([u32(pngs.length), u32(0)]))];
+  let seq = 0;
+  const fctl = () => chunk('fcTL', Buffer.concat([u32(seq++), u32(w), u32(h), u32(0), u32(0), u16(delayMs), u16(1000), Buffer.from([0, 0])]));
+  frames.forEach((f, i) => { o.push(fctl()); for (const c of f.filter((x) => x.type === 'IDAT')) o.push(i === 0 ? chunk('IDAT', c.data) : chunk('fdAT', Buffer.concat([u32(seq++), c.data]))); });
+  o.push(chunk('IEND', Buffer.alloc(0)));
+  return Buffer.concat(o);
+}
+const allAnims = `(() => { const out = []; const walk = (root) => { out.push(...root.getAnimations()); root.querySelectorAll('*').forEach((e) => { if (e.shadowRoot) walk(e.shadowRoot); }); }; walk(document); return out; })()`;
+async function recordApng(file, query, width, seconds, fps) {
+  await send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: false });
+  await send('Page.navigate', { url: base + '?' + query });
+  for (let i = 0; i < 60; i++) { if ((await evalJs('document.title')) === 'ready') break; await sleep(150); }
+  await sleep(1500);
+  const h = Math.ceil(await evalJs('document.body.scrollHeight'));
+  await send('Emulation.setDeviceMetricsOverride', { width, height: h, deviceScaleFactor: 1, mobile: false });
+  await sleep(300);
+  const count = await evalJs(allAnims + '.length'), frames = [], n = Math.round(seconds * fps);
+  for (let i = 0; i < n; i++) {
+    await evalJs(`${allAnims}.forEach((a) => { a.pause(); a.currentTime = ${Math.round((i * 1000) / fps)}; })`);
+    await sleep(40);
+    frames.push(Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64'));
+  }
+  const apng = buildApng(frames, Math.round(1000 / fps));
+  writeFileSync(join(out, file), apng);
+  console.log('✔', file, `${count} animations, ${n} frames, ${(apng.length / 1024).toFixed(0)} KB`);
+}
 await send('Page.enable');
 for (const [s, w] of [['full', 512], ['compact', 392], ['header', 512], ['battery', 512], ['consumers', 512]]) await shot(s + '.png', `scene=${s}&lang=en&w=${w - 32}`, w);
 await shot('compact-ro.png', 'scene=compact&lang=ro&w=360', 392);
+await recordApng('compact-animated.png', 'scene=compact&lang=en&w=360', 392, 2.8, 10);
 await send('Browser.close').catch(() => {});
 proc.kill(); server.close();
 await sleep(500);
