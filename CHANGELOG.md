@@ -1,6 +1,9 @@
 # Changelog
 
-## 0.1.1 (in preparation)
+## 0.1.2
+- **Registering with HACS / Marketplace.** We are submitting the repository for the official HACS list: the HACS Action validation is now part of the repo, and this release follows it, as the review requires. **No code changes. You do not need to do anything**; if you update, you will see no difference.
+
+## 0.1.1
 - **README:** the compact flow is shown animated (`compact-animated.png`: the bands glow and dots and arrows run along them), and the README mentions it; badges for release, downloads, build and licence.
 - Documentation only: the card itself is unchanged.
 
